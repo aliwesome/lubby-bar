@@ -452,6 +452,25 @@ struct NotchIslandView: View {
                 .buttonStyle(.plain)
             }
 
+            if !model.alerts.isEmpty {
+                HStack(spacing: 8) {
+                    Text("PINGS")
+                        .font(.system(size: 9, weight: .bold, design: .monospaced))
+                        .foregroundStyle(.white.opacity(0.35))
+                    Spacer(minLength: 8)
+                    Button(action: {
+                        model.open(path: "/notifications")
+                        state.pinned = false
+                    }) {
+                        Text("All notifications →")
+                            .font(.system(size: 10, weight: .medium, design: .monospaced))
+                            .foregroundStyle(Color.lubbyOrange)
+                    }
+                    .buttonStyle(.plain)
+                }
+                .padding(.top, 2)
+            }
+
             ForEach(model.alerts.prefix(3)) { alert in
                 HStack(spacing: 9) {
                     Text(alert.emoji).font(.system(size: 13))
@@ -460,6 +479,11 @@ struct NotchIslandView: View {
                         .foregroundStyle(.white.opacity(alert.unread ? 0.95 : 0.55))
                         .lineLimit(1)
                     Spacer(minLength: 8)
+                    if let when = Self.relativeTime(alert.createdAt) {
+                        Text(when)
+                            .font(.system(size: 10, design: .monospaced))
+                            .foregroundStyle(.white.opacity(0.4))
+                    }
                     if alert.unread {
                         Circle().fill(Color.lubbyOrange).frame(width: 6, height: 6)
                     }
@@ -562,6 +586,18 @@ struct NotchIslandView: View {
     }
 
     // MARK: - Time helpers
+
+    /// Compact "now / 4m / 2h / 3d" for a ping's age. Nil when undated.
+    private static func relativeTime(_ date: Date?) -> String? {
+        guard let date else { return nil }
+        let seconds = max(0, Date().timeIntervalSince(date))
+        if seconds < 60 { return "now" }
+        let minutes = Int(seconds / 60)
+        if minutes < 60 { return "\(minutes)m" }
+        let hours = minutes / 60
+        if hours < 24 { return "\(hours)h" }
+        return "\(hours / 24)d"
+    }
 
     private static func clock(_ date: Date, in zone: TimeZone) -> String {
         let f = DateFormatter()

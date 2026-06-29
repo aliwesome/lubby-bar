@@ -274,4 +274,5 @@ final class AppModel: ObservableObject {
             NSWorkspace.shared.open(url)
         }
     }
+
 }
