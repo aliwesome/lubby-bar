@@ -45,11 +45,20 @@ enum Status: String {
 }
 
 struct SessionInfo: Identifiable {
-    let id = UUID()
+    /// Stable identity (the session id locally, a stack/agent key remotely) so
+    /// rows keep their place and SwiftUI doesn't recreate them each poll.
+    let id: String
     var agent: String
     var status: Status
     var project: String?
     var updatedAt: Date?
+    /// Absolute working directory of the session (local sessions only).
+    var cwd: String?
+    /// Controlling terminal device, e.g. "/dev/ttys004", used to jump to the
+    /// exact terminal tab. Nil for remote sessions or when it couldn't be read.
+    var tty: String?
+    /// `$TERM_PROGRAM` at session start (e.g. "iTerm.app", "Apple_Terminal").
+    var termProgram: String?
 }
 
 /// Roll up many sessions into one dot. Priority: waiting (needs you) beats

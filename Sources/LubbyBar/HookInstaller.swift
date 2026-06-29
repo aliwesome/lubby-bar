@@ -5,8 +5,13 @@ import Foundation
 /// existing hook, only add/replace our own. Detects our entries by the binary
 /// name plus the " hook " marker, so reinstalling updates a moved app path.
 enum HookInstaller {
+    // SessionStart/UserPromptSubmit/PreToolUse all mean "the agent is working"
+    // (green). Without UserPromptSubmit + PreToolUse the dot would stick on the
+    // last Stop and never return to green when a new turn begins.
     private static let events: [(claudeEvent: String, arg: String)] = [
         ("SessionStart", "started"),
+        ("UserPromptSubmit", "started"),
+        ("PreToolUse", "started"),
         ("Notification", "waiting_input"),
         ("Stop", "completed"),
     ]

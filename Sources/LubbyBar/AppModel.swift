@@ -13,6 +13,13 @@ final class AppModel: ObservableObject {
         case lubby
     }
 
+    /// How the collapsed notch indicator renders the live sessions.
+    enum IndicatorStyle: String, CaseIterable {
+        case aggregate  // one dot, rolled-up status
+        case sessions   // one small dot per session
+        case blend      // proportional gradient across the notch
+    }
+
     @Published var sourceMode: SourceMode {
         didSet {
             defaults.set(sourceMode.rawValue, forKey: Keys.sourceMode)
@@ -21,13 +28,26 @@ final class AppModel: ObservableObject {
     }
 
     @Published var serverURL: String {
-        didSet { defaults.set(serverURL, forKey: Keys.serverURL) }
+        didSet {
+            defaults.set(serverURL, forKey: Keys.serverURL)
+            restartFeed()
+        }
+    }
+
+    @Published var indicatorStyle: IndicatorStyle {
+        didSet { defaults.set(indicatorStyle.rawValue, forKey: Keys.indicatorStyle) }
     }
 
     @Published private(set) var status: Status = .idle
     @Published private(set) var sessions: [SessionInfo] = []
     @Published private(set) var loggedIn: Bool
     @Published var connectionError: String?
+
+    // Set by the notch island once it knows whether the main screen has a notch.
+    // Drives hiding the redundant menu-bar item on notched Macs. Set late (in
+    // applicationDidFinishLaunching) because the notch geometry isn't ready at
+    // App init time.
+    @Published var notchActive = false
 
     // Login ceremony state, surfaced in the panel.
     @Published var loginUserCode: String?
@@ -39,15 +59,27 @@ final class AppModel: ObservableObject {
     private let defaults = UserDefaults.standard
     private let local = LocalSource()
     private let lubby = LubbySource()
+    private let feed = PresenceFeed()
+
+    // Social/presence layer (Lubby mode only).
+    @Published private(set) var nearby: NearbySummary?
+    @Published private(set) var alerts: [Alert] = []
+    @Published private(set) var connections: [Person] = []
+    @Published private(set) var nearbyPeople: [Person] = []
+    /// Set to the most recent genuinely-new alert so the notch can pop a toast.
+    @Published var latestToast: Alert?
+    private var seenAlertIDs: Set<Int> = []
 
     private enum Keys {
         static let sourceMode = "sourceMode"
         static let serverURL = "serverURL"
+        static let indicatorStyle = "indicatorStyle"
     }
 
     private init() {
         sourceMode = SourceMode(rawValue: defaults.string(forKey: Keys.sourceMode) ?? "") ?? .local
         serverURL = defaults.string(forKey: Keys.serverURL) ?? "https://lubby.tech"
+        indicatorStyle = IndicatorStyle(rawValue: defaults.string(forKey: Keys.indicatorStyle) ?? "") ?? .aggregate
         loggedIn = Keychain.get() != nil
 
         local.onUpdate = { [weak self] infos in
@@ -60,10 +92,17 @@ final class AppModel: ObservableObject {
         lubby.onError = { [weak self] message in
             self?.connectionError = message
         }
+        feed.onNearby = { [weak self] summary in self?.nearby = summary }
+        feed.onAlerts = { [weak self] alerts in self?.ingest(alerts: alerts) }
+        feed.onPeople = { [weak self] connections, nearby in
+            self?.connections = connections
+            self?.nearbyPeople = nearby
+        }
 
         refreshHookState()
         refreshLaunchAtLogin()
         restartSource()
+        restartFeed()
     }
 
     private func apply(sessions: [SessionInfo], overall: Status) {
@@ -89,6 +128,34 @@ final class AppModel: ObservableObject {
             lubby.serverURL = serverURL
             lubby.token = token
             lubby.start()
+        }
+    }
+
+    /// The social/presence layer (Lubby page) runs whenever the machine is
+    /// connected to Lubby (has a token), independent of which status source is
+    /// chosen, so Local-mode users still get presence and pings.
+    func restartFeed() {
+        feed.stop()
+        seenAlertIDs.removeAll()
+        nearby = nil
+        alerts = []
+        connections = []
+        nearbyPeople = []
+        guard let token = Keychain.get(), !token.isEmpty else { return }
+        feed.serverURL = serverURL
+        feed.token = token
+        feed.start()
+    }
+
+    /// Replace the alert list and pop a toast for the newest genuinely-new alert.
+    /// The first poll seeds the seen set without toasting the backlog.
+    private func ingest(alerts: [Alert]) {
+        let firstPoll = seenAlertIDs.isEmpty && self.alerts.isEmpty
+        let fresh = alerts.filter { $0.unread && !seenAlertIDs.contains($0.id) }
+        alerts.forEach { seenAlertIDs.insert($0.id) }
+        self.alerts = alerts
+        if !firstPoll, let toast = fresh.first {
+            latestToast = toast
         }
     }
 
@@ -156,12 +223,14 @@ final class AppModel: ObservableObject {
         loginInProgress = false
         loginUserCode = nil
         if sourceMode == .lubby { restartSource() }
+        restartFeed()
     }
 
     func disconnect() {
         Keychain.delete()
         loggedIn = false
         if sourceMode == .lubby { restartSource() }
+        restartFeed()
     }
 
     // MARK: - Launch at login
@@ -184,7 +253,15 @@ final class AppModel: ObservableObject {
     }
 
     func openServer() {
-        if let url = URL(string: serverURL.trimmedSlash) {
+        open(path: "")
+    }
+
+    func openMap() {
+        open(path: "/map")
+    }
+
+    func open(path: String) {
+        if let url = URL(string: serverURL.trimmedSlash + path) {
             NSWorkspace.shared.open(url)
         }
     }

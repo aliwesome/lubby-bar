@@ -96,6 +96,19 @@ struct PanelView: View {
             }
             .pickerStyle(.segmented)
 
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Notch indicator")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                Picker("Notch indicator", selection: indicatorBinding) {
+                    Text("Dot").tag(AppModel.IndicatorStyle.aggregate)
+                    Text("Per session").tag(AppModel.IndicatorStyle.sessions)
+                    Text("Blend").tag(AppModel.IndicatorStyle.blend)
+                }
+                .pickerStyle(.segmented)
+                .labelsHidden()
+            }
+
             if model.sourceMode == .local {
                 localSettings
             } else {
@@ -179,6 +192,10 @@ struct PanelView: View {
 
     private var sourceBinding: Binding<AppModel.SourceMode> {
         Binding(get: { model.sourceMode }, set: { model.sourceMode = $0 })
+    }
+
+    private var indicatorBinding: Binding<AppModel.IndicatorStyle> {
+        Binding(get: { model.indicatorStyle }, set: { model.indicatorStyle = $0 })
     }
 
     private var launchBinding: Binding<Bool> {

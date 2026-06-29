@@ -51,11 +51,16 @@ Toggle **Launch at login** to keep it running.
 `Install hook` adds three entries to `~/.claude/settings.json` (existing hooks
 are preserved):
 
-| Claude event   | Status        |
-| -------------- | ------------- |
-| `SessionStart` | running       |
-| `Notification` | waiting input |
-| `Stop`         | completed     |
+| Claude event       | Status        |
+| ------------------ | ------------- |
+| `SessionStart`     | running       |
+| `UserPromptSubmit` | running       |
+| `PreToolUse`       | running       |
+| `Notification`     | waiting input |
+| `Stop`             | completed     |
+
+`UserPromptSubmit` and `PreToolUse` are what turn the dot back to green when a
+new turn begins, otherwise it would stick on the previous `Stop`.
 
 Each runs `LubbyBar hook <event>`, the same binary in CLI mode, which updates the
 local status file. A running session with no update for ~30 minutes is treated as

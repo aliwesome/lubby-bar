@@ -30,21 +30,34 @@ final class LocalSource {
         let formatter = ISO8601DateFormatter()
         var infos: [SessionInfo] = []
 
-        for (_, session) in file?.sessions ?? [:] {
+        for (key, session) in file?.sessions ?? [:] {
             let updated = formatter.date(from: session.updated_at)
-            var raw = session.status
-            if raw == "running", let updated, now.timeIntervalSince(updated) > staleAfter {
-                raw = "stopped"
-            }
+            // Drop abandoned sessions: an active Claude session updates often
+            // (every prompt/tool call), so no update for a while means the
+            // terminal closed or crashed without a Stop hook. Hiding them keeps
+            // the list to what's actually live, instead of a pile of stale rows.
+            if let updated, now.timeIntervalSince(updated) > staleAfter { continue }
+            if updated == nil { continue }
+
             infos.append(SessionInfo(
+                id: key,
                 agent: session.agent,
-                status: Status.from(raw: raw),
+                status: Status.from(raw: session.status),
                 project: session.project,
-                updatedAt: updated
+                updatedAt: updated,
+                cwd: session.cwd,
+                tty: session.tty,
+                termProgram: session.term_program
             ))
         }
 
-        infos.sort { ($0.updatedAt ?? .distantPast) > ($1.updatedAt ?? .distantPast) }
+        // Stable order by project (then id), so rows don't jump around as their
+        // statuses and timestamps tick - sorting by recency was the churn.
+        infos.sort {
+            let a = ($0.project ?? "").lowercased()
+            let b = ($1.project ?? "").lowercased()
+            return a == b ? $0.id < $1.id : a < b
+        }
         onUpdate?(infos)
     }
 }

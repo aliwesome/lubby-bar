@@ -62,8 +62,17 @@ final class LubbySource {
                 return
             }
 
-            let infos = decoded.sessions.map {
-                SessionInfo(agent: $0.agent, status: Status.from(raw: $0.status), project: $0.stack, updatedAt: nil)
+            // Stable alphabetical order + stable ids so rows keep their place
+            // across polls (the server orders by recency, which would churn).
+            let ordered = decoded.sessions.sorted { ($0.stack ?? "") < ($1.stack ?? "") }
+            let infos = ordered.enumerated().map { index, item in
+                SessionInfo(
+                    id: "\(item.stack ?? "_")|\(item.agent)|\(index)",
+                    agent: item.agent,
+                    status: Status.from(raw: item.status),
+                    project: item.stack,
+                    updatedAt: nil
+                )
             }
             DispatchQueue.main.async {
                 self.onUpdate?(infos, Status.from(raw: decoded.overall))
