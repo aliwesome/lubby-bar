@@ -562,7 +562,7 @@ struct NotchIslandView: View {
         )
         .contentShape(Rectangle())
         .onTapGesture {
-            if let u = person.username { model.open(path: "/@\(u)") }
+            if let u = person.username { model.open(path: "/u/\(u)") }
             state.pinned = false
         }
     }
