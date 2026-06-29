@@ -16,6 +16,7 @@ struct Alert: Identifiable, Equatable {
     let actorName: String?
     let url: String?
     let unread: Bool
+    let createdAt: Date?
 
     var actor: String { actorName?.isEmpty == false ? actorName! : "Someone" }
 
@@ -143,6 +144,7 @@ final class PresenceFeed {
             let actor_name: String?
             let url: String?
             let unread: Bool
+            let created_at: String?
         }
     }
 
@@ -155,8 +157,13 @@ final class PresenceFeed {
                   let decoded = try? JSONDecoder().decode(AlertsResponse.self, from: data)
             else { return }
 
+            let formatter = ISO8601DateFormatter()
             let alerts = decoded.alerts.map {
-                Alert(id: $0.id, type: $0.type, actorName: $0.actor_name, url: $0.url, unread: $0.unread)
+                Alert(
+                    id: $0.id, type: $0.type, actorName: $0.actor_name, url: $0.url,
+                    unread: $0.unread,
+                    createdAt: $0.created_at.flatMap(formatter.date(from:))
+                )
             }
             DispatchQueue.main.async { self.onAlerts?(alerts) }
         }.resume()

@@ -148,13 +148,22 @@ final class AppModel: ObservableObject {
     }
 
     /// Replace the alert list and pop a toast for the newest genuinely-new alert.
-    /// The first poll seeds the seen set without toasting the backlog.
+    /// On the first poll we don't pop the whole backlog, but we still toast
+    /// anything unread from the last few minutes, so a hi sent moments before you
+    /// connected still notifies.
     private func ingest(alerts: [Alert]) {
         let firstPoll = seenAlertIDs.isEmpty && self.alerts.isEmpty
-        let fresh = alerts.filter { $0.unread && !seenAlertIDs.contains($0.id) }
+        let recentCutoff = Date().addingTimeInterval(-3 * 60)
+        let fresh = alerts.filter { alert in
+            guard alert.unread, !seenAlertIDs.contains(alert.id) else { return false }
+            if firstPoll {
+                guard let created = alert.createdAt, created > recentCutoff else { return false }
+            }
+            return true
+        }
         alerts.forEach { seenAlertIDs.insert($0.id) }
         self.alerts = alerts
-        if !firstPoll, let toast = fresh.first {
+        if let toast = fresh.first {
             latestToast = toast
         }
     }
