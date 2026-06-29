@@ -462,7 +462,7 @@ struct NotchIslandView: View {
                         model.open(path: "/notifications")
                         state.pinned = false
                     }) {
-                        Text("All notifications →")
+                        Text("All →")
                             .font(.system(size: 10, weight: .medium, design: .monospaced))
                             .foregroundStyle(Color.lubbyOrange)
                     }
