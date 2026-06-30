@@ -1,0 +1,11 @@
+[package]
+name = "lubby-core"
+version = "0.1.0"
+edition = "2021"
+description = "Cross-platform status-file + hook logic shared by the Lubby Bar Windows app"
+
+[dependencies]
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+chrono = { version = "0.4", default-features = false, features = ["clock", "serde"] }
+dirs = "5"
