@@ -826,9 +826,8 @@ struct NotchIslandView: View {
 
     private var subtitle: String {
         let count = model.sessions.count
-        let source = model.sourceMode == .local ? "local" : "lubby"
         let label = count == 1 ? "session" : "sessions"
-        return "\(source) · \(count) \(label)"
+        return "this device · \(count) \(label)"
     }
 
     private func shortLabel(_ status: Status) -> String {

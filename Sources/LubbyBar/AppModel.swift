@@ -3,28 +3,18 @@ import Combine
 import Foundation
 import ServiceManagement
 
-/// Owns the current status, the chosen source, and the user-facing settings.
+/// Owns the current status and the user-facing settings. Sessions always come
+/// from this device's local hook; the Lubby connection only powers the social
+/// layer (presence, people, pings).
 /// SwiftUI observes it; all @Published mutations happen on the main thread.
 final class AppModel: ObservableObject {
     static let shared = AppModel()
-
-    enum SourceMode: String {
-        case local
-        case lubby
-    }
 
     /// How the collapsed notch indicator renders the live sessions.
     enum IndicatorStyle: String, CaseIterable {
         case aggregate  // one dot, rolled-up status
         case sessions   // one small dot per session
         case blend      // proportional gradient across the notch
-    }
-
-    @Published var sourceMode: SourceMode {
-        didSet {
-            defaults.set(sourceMode.rawValue, forKey: Keys.sourceMode)
-            restartSource()
-        }
     }
 
     @Published var serverURL: String {
@@ -58,10 +48,9 @@ final class AppModel: ObservableObject {
 
     private let defaults = UserDefaults.standard
     private let local = LocalSource()
-    private let lubby = LubbySource()
     private let feed = PresenceFeed()
 
-    // Social/presence layer (Lubby mode only).
+    // Social/presence layer (active whenever connected to Lubby).
     @Published private(set) var nearby: NearbySummary?
     @Published private(set) var alerts: [Alert] = []
     @Published private(set) var connections: [Person] = []
@@ -71,26 +60,17 @@ final class AppModel: ObservableObject {
     private var seenAlertIDs: Set<Int> = []
 
     private enum Keys {
-        static let sourceMode = "sourceMode"
         static let serverURL = "serverURL"
         static let indicatorStyle = "indicatorStyle"
     }
 
     private init() {
-        sourceMode = SourceMode(rawValue: defaults.string(forKey: Keys.sourceMode) ?? "") ?? .local
         serverURL = defaults.string(forKey: Keys.serverURL) ?? "https://lubby.tech"
         indicatorStyle = IndicatorStyle(rawValue: defaults.string(forKey: Keys.indicatorStyle) ?? "") ?? .aggregate
         loggedIn = Keychain.get() != nil
 
         local.onUpdate = { [weak self] infos in
             self?.apply(sessions: infos, overall: aggregate(infos.map(\.status)))
-        }
-        lubby.onUpdate = { [weak self] infos, overall in
-            self?.connectionError = nil
-            self?.apply(sessions: infos, overall: overall)
-        }
-        lubby.onError = { [weak self] message in
-            self?.connectionError = message
         }
         feed.onNearby = { [weak self] summary in self?.nearby = summary }
         feed.onAlerts = { [weak self] alerts in self?.ingest(alerts: alerts) }
@@ -101,7 +81,7 @@ final class AppModel: ObservableObject {
 
         refreshHookState()
         refreshLaunchAtLogin()
-        restartSource()
+        local.start()
         restartFeed()
     }
 
@@ -110,30 +90,11 @@ final class AppModel: ObservableObject {
         status = overall
     }
 
-    // MARK: - Source switching
-
-    func restartSource() {
-        local.stop()
-        lubby.stop()
-        connectionError = nil
-
-        switch sourceMode {
-        case .local:
-            local.start()
-        case .lubby:
-            guard let token = Keychain.get(), !token.isEmpty else {
-                apply(sessions: [], overall: .idle)
-                return
-            }
-            lubby.serverURL = serverURL
-            lubby.token = token
-            lubby.start()
-        }
-    }
+    // MARK: - Presence feed
 
     /// The social/presence layer (Lubby page) runs whenever the machine is
-    /// connected to Lubby (has a token), independent of which status source is
-    /// chosen, so Local-mode users still get presence and pings.
+    /// connected to Lubby (has a token). Sessions stay local; this only powers
+    /// nearby presence, people, and pings.
     func restartFeed() {
         feed.stop()
         seenAlertIDs.removeAll()
@@ -231,14 +192,12 @@ final class AppModel: ObservableObject {
         loggedIn = true
         loginInProgress = false
         loginUserCode = nil
-        if sourceMode == .lubby { restartSource() }
         restartFeed()
     }
 
     func disconnect() {
         Keychain.delete()
         loggedIn = false
-        if sourceMode == .lubby { restartSource() }
         restartFeed()
     }
 

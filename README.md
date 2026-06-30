@@ -41,26 +41,27 @@ When you connect to a Lubby server, a second tab lights up:
 
 Not connected yet? The Lubby tab is a one-tap **Connect** call to action.
 
-## Two sources (pick in Settings)
+## How it fits together
 
-- **Local** - fully offline and private. A Claude Code hook writes a small
-  status file (`~/.lubby-bar/status.json`) that the app watches. No account, no
-  network.
-- **Lubby** - sign in to your Lubby server and the dot reflects your status as
-  the server sees it (works across machines). The social tab runs whenever you
-  are connected, independent of which status source you pick, so you can stay in
-  Local mode and still get presence and pings. Uses the same `lub_` connector
-  token as the rest of Lubby, obtained via a browser approval flow (no token
-  pasting required, though you can paste one if you prefer).
+- **Sessions are always local.** A Claude Code hook writes a small status file
+  (`~/.lubby-bar/status.json`) that the app watches, so the dot and the Sessions
+  tab reflect exactly what is running on **this device**. This works fully
+  offline, with no account and nothing leaving your machine.
+- **Connecting to Lubby is optional and only adds the social layer.** Sign in to
+  your Lubby server (default `https://lubby.tech`) and the second tab fills with
+  nearby presence, your people, and pings. It never changes where sessions come
+  from. Sign-in uses the same `lub_` connector token as the rest of Lubby,
+  obtained through a browser approval flow (no token pasting required, though you
+  can paste one if you prefer).
 
 ## Privacy
 
 Like the rest of Lubby, this never transmits source code, file names, paths,
-prompts, terminal output, or diffs. In local mode the status file only records a
-coarse status, the agent name (`claude_code`), and the project name, and it
-never leaves your machine. The hook never reads the transcript. The social layer
-only ever shows people's names, avatars, coarse timezone, and a coarse status,
-never location coordinates.
+prompts, terminal output, or diffs. The local status file only records a coarse
+status, the agent name (`claude_code`), and the project name, and it never
+leaves your machine. The hook never reads the transcript. The social layer only
+ever shows people's names, avatars, coarse timezone, and a coarse status, never
+location coordinates.
 
 ## Install
 
@@ -77,11 +78,12 @@ Or grab a build from [lubby.tech/download](https://lubby.tech/download).
 
 Then open the panel → **gear (Settings)**:
 
-- **Local mode**: click **Install hook**. Start a Claude Code session and the
-  light turns green; when Claude asks for input it turns orange; when it stops,
-  red.
-- **Lubby mode / social**: set your server URL (default `https://lubby.tech`),
-  click **Connect to Lubby**, and approve in the browser.
+- **Sessions (required)**: click **Install hook**. Start a Claude Code session
+  and the light turns green; when Claude asks for input it turns orange; when it
+  stops, red.
+- **Social (optional)**: set your server URL (default `https://lubby.tech`),
+  click **Connect to Lubby**, and approve in the browser to light up the Lubby
+  tab.
 
 Toggle **Launch at login** to keep it running.
 

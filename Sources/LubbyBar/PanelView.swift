@@ -52,12 +52,14 @@ struct PanelView: View {
             Text(model.status.label)
                 .font(.headline)
             Spacer()
-            Text(model.sourceMode == .local ? "Local" : "Lubby")
-                .font(.caption2.weight(.semibold))
-                .foregroundStyle(.secondary)
-                .padding(.horizontal, 6)
-                .padding(.vertical, 2)
-                .background(.quaternary, in: Capsule())
+            if model.loggedIn {
+                Text("Lubby")
+                    .font(.caption2.weight(.semibold))
+                    .foregroundStyle(.secondary)
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 2)
+                    .background(.quaternary, in: Capsule())
+            }
         }
     }
 
@@ -90,12 +92,6 @@ struct PanelView: View {
     @ViewBuilder
     private var settings: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Picker("Source", selection: sourceBinding) {
-                Text("Local").tag(AppModel.SourceMode.local)
-                Text("Lubby").tag(AppModel.SourceMode.lubby)
-            }
-            .pickerStyle(.segmented)
-
             VStack(alignment: .leading, spacing: 4) {
                 Text("Notch indicator")
                     .font(.caption)
@@ -109,11 +105,13 @@ struct PanelView: View {
                 .labelsHidden()
             }
 
-            if model.sourceMode == .local {
-                localSettings
-            } else {
-                lubbySettings
-            }
+            // Sessions are always read from this device's Claude hook.
+            localSettings
+
+            Divider()
+
+            // Connecting to Lubby only powers the social layer (presence, people, pings).
+            lubbySettings
 
             Toggle("Launch at login", isOn: launchBinding)
                 .font(.callout)
@@ -189,10 +187,6 @@ struct PanelView: View {
     }
 
     // MARK: - Bindings that route through the model's side effects.
-
-    private var sourceBinding: Binding<AppModel.SourceMode> {
-        Binding(get: { model.sourceMode }, set: { model.sourceMode = $0 })
-    }
 
     private var indicatorBinding: Binding<AppModel.IndicatorStyle> {
         Binding(get: { model.indicatorStyle }, set: { model.indicatorStyle = $0 })
