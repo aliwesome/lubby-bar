@@ -57,11 +57,14 @@ Not connected yet? The Lubby tab is a one-tap **Connect** call to action.
 ## Privacy
 
 Like the rest of Lubby, this never transmits source code, file names, paths,
-prompts, terminal output, or diffs. The local status file only records a coarse
-status, the agent name (`claude_code`), and the project name, and it never
-leaves your machine. The hook never reads the transcript. The social layer only
-ever shows people's names, avatars, coarse timezone, and a coarse status, never
-location coordinates.
+prompts, terminal output, or diffs. The local status file records a coarse
+status, the agent name (`claude_code`), and the project name; on macOS it also
+keeps each session's working directory and terminal app, used only on this
+machine to jump to the right terminal tab when you click a session (the Windows
+build stores the coarse fields only). None of it ever leaves your machine, and
+the hook never reads the transcript. The social layer only ever shows people's
+names, avatars, coarse timezone, and a coarse status, never location
+coordinates.
 
 ## Install
 
